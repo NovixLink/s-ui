@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alireza0/s-ui/core/manager"
+	suiVless "github.com/alireza0/s-ui/core/protocol/vless"
 
 	"github.com/sagernet/sing-box/adapter"
 	boxCertificate "github.com/sagernet/sing-box/adapter/certificate"
@@ -113,6 +114,7 @@ func NewBox(options Options) (*Box, error) {
 		ctx = context.Background()
 	}
 	ctx = service.ContextWithDefaultRegistry(ctx)
+	ctx = service.ContextWith[*suiVless.SharedListeners](ctx, suiVless.NewSharedListeners())
 
 	endpointRegistry := service.FromContext[adapter.EndpointRegistry](ctx)
 	inboundRegistry := service.FromContext[adapter.InboundRegistry](ctx)

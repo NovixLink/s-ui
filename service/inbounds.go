@@ -117,6 +117,14 @@ func (s *InboundService) Save(tx *gorm.DB, act string, data json.RawMessage, ini
 				return err
 			}
 		}
+		if act == "new" && inbound.Type == "vless" {
+			// Allocate the permanent line ID before generating either the server
+			// config or subscriptions. A failed creation rolls back this transaction.
+			inbound.Id = 0
+			if err = tx.Create(&inbound).Error; err != nil {
+				return err
+			}
+		}
 		var oldTag string
 		if act == "edit" {
 			err = tx.Model(model.Inbound{}).Select("tag").Where("id = ?", inbound.Id).Find(&oldTag).Error
@@ -126,13 +134,6 @@ func (s *InboundService) Save(tx *gorm.DB, act string, data json.RawMessage, ini
 		}
 
 		if corePtr.IsRunning() {
-			if act == "edit" {
-				err = corePtr.RemoveInbound(oldTag)
-				if err != nil && err != os.ErrInvalid {
-					return err
-				}
-			}
-
 			inboundConfig, err := inbound.MarshalJSON()
 			if err != nil {
 				return err
@@ -145,6 +146,15 @@ func (s *InboundService) Save(tx *gorm.DB, act string, data json.RawMessage, ini
 			}
 			if err != nil {
 				return err
+			}
+			if err = corePtr.CheckInbounds([][]byte{inboundConfig}, []string{oldTag}); err != nil {
+				return err
+			}
+			if act == "edit" {
+				err = corePtr.RemoveInbound(oldTag)
+				if err != nil && err != os.ErrInvalid {
+					return err
+				}
 			}
 
 			err = corePtr.AddInbound(inboundConfig)
@@ -414,14 +424,9 @@ func (s *InboundService) RestartInbounds(tx *gorm.DB, ids []uint) error {
 	if err != nil {
 		return err
 	}
+	var configs [][]byte
+	var tags []string
 	for _, inbound := range inbounds {
-		err = corePtr.RemoveInbound(inbound.Tag)
-		if err != nil && err != os.ErrInvalid {
-			return err
-		}
-		// Close all existing connections
-		box.SessionTracker().CloseByInbound(inbound.Tag)
-
 		inboundConfig, err := inbound.MarshalJSON()
 		if err != nil {
 			return err
@@ -430,7 +435,31 @@ func (s *InboundService) RestartInbounds(tx *gorm.DB, ids []uint) error {
 		if err != nil {
 			return err
 		}
-		err = corePtr.AddInbound(inboundConfig)
+		configs = append(configs, inboundConfig)
+		tags = append(tags, inbound.Tag)
+	}
+	if err = corePtr.CheckInbounds(configs, tags); err != nil {
+		return err
+	}
+	for _, inbound := range inbounds {
+		if inbound.Type != "vless" {
+			continue
+		}
+		err = corePtr.RemoveInbound(inbound.Tag)
+		if err != nil && err != os.ErrInvalid {
+			return err
+		}
+		box.SessionTracker().CloseByInbound(inbound.Tag)
+	}
+	for index, config := range configs {
+		if inbounds[index].Type != "vless" {
+			err = corePtr.RemoveInbound(inbounds[index].Tag)
+			if err != nil && err != os.ErrInvalid {
+				return err
+			}
+			box.SessionTracker().CloseByInbound(inbounds[index].Tag)
+		}
+		err = corePtr.AddInbound(config)
 		if err != nil {
 			return err
 		}

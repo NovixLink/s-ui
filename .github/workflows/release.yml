@@ -221,7 +221,7 @@ jobs:
           if [ "${{ matrix.naive }}" = "true" ]; then PROFILE=release; else PROFILE=test; fi
           TAGS=$(tags_for "$PROFILE")
           LDFLAGS=$(ldflags_for "$PROFILE")
-          go build -ldflags="$LDFLAGS -linkmode external -extldflags '-static'" -tags "$TAGS" -o sui main.go
+          sh scripts/relay-go.sh build -ldflags="$LDFLAGS -linkmode external -extldflags '-static'" -tags "$TAGS" -o sui main.go
           file sui
           ldd sui 2>/dev/null || echo "Static binary confirmed"
 
@@ -306,7 +306,7 @@ jobs:
           . ./build-tags.sh
           TAGS=$(tags_for windows)
           LDFLAGS=$(ldflags_for windows)
-          go build -ldflags="$LDFLAGS" -tags "$TAGS" -o sui.exe main.go
+          sh scripts/relay-go.sh build -ldflags="$LDFLAGS" -tags "$TAGS" -o sui.exe main.go
           file sui.exe
           
           mkdir s-ui-windows

@@ -34,7 +34,7 @@ jobs:
           fi
 
       - name: Vet
-        run: go vet ./...
+        run: sh scripts/relay-go.sh vet ./...
 
       # A list pasted back into a workflow or Dockerfile compiles fine and then
       # drifts in silence. with_qui[c] so the pattern misses its own line.
@@ -59,7 +59,7 @@ jobs:
           set -e
           . ./build-tags.sh
           TAGS=$(tags_for test)
-          go test -tags "$TAGS" ./...
+          sh scripts/relay-go.sh test -tags "$TAGS" ./...
 
       # Scoped to the packages that are clean today, so this fails on a race we
       # introduce rather than the known upstream one in route.NetworkManager.
@@ -68,4 +68,4 @@ jobs:
           set -e
           . ./build-tags.sh
           TAGS=$(tags_for test)
-          go test -race -short -tags "$TAGS" ./api/... ./service/... ./sub/... ./database/... ./util/... ./logger/... ./network/...
+          sh scripts/relay-go.sh test -race -short -tags "$TAGS" ./api/... ./service/... ./sub/... ./database/... ./util/... ./logger/... ./network/...

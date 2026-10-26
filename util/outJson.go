@@ -26,6 +26,9 @@ func FillOutJson(i *model.Inbound, hostname string) error {
 
 	if i.TlsId > 0 {
 		addTls(&outJson, i.Tls)
+		if tls, ok := outJson["tls"].(map[string]interface{}); ok {
+			i.ApplyRealityShortID(tls, false)
+		}
 	} else {
 		delete(outJson, "tls")
 	}

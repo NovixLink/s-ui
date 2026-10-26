@@ -250,6 +250,10 @@ func (s *ConfigService) startCoreLocked(bypassCooldown bool) error {
 	}
 
 	logger.Info("starting core")
+	if err := s.InboundService.SyncRealityShortIDs(); err != nil {
+		logger.Error("update REALITY subscription selectors: ", err)
+		return err
+	}
 	rawConfig, err := s.GetConfig("")
 	if err != nil {
 		return err

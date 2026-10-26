@@ -1,6 +1,8 @@
 package model
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 )
 
@@ -16,6 +18,28 @@ type Inbound struct {
 	Addrs   json.RawMessage `json:"addrs" form:"addrs"`
 	OutJson json.RawMessage `json:"out_json" form:"out_json"`
 	Options json.RawMessage `json:"-" form:"-"`
+}
+
+// ApplyRealityShortID derives the stable line selector from the existing
+// AUTOINCREMENT primary key. Renames and edits preserve it; deleting and
+// recreating an inbound gives it a new selector. It does not authenticate users.
+func (i Inbound) ApplyRealityShortID(tls map[string]interface{}, server bool) string {
+	if i.Type != "vless" || i.Id == 0 {
+		return ""
+	}
+	reality, ok := tls["reality"].(map[string]interface{})
+	if !ok || reality["enabled"] != true {
+		return ""
+	}
+	var identifier [8]byte
+	binary.BigEndian.PutUint64(identifier[:], uint64(i.Id))
+	shortID := hex.EncodeToString(identifier[:])
+	if server {
+		reality["short_id"] = []string{shortID}
+	} else {
+		reality["short_id"] = shortID
+	}
+	return shortID
 }
 
 func (i *Inbound) UnmarshalJSON(data []byte) error {
@@ -63,7 +87,12 @@ func (i Inbound) MarshalJSON() ([]byte, error) {
 	combined["type"] = i.Type
 	combined["tag"] = i.Tag
 	if i.Tls != nil {
-		combined["tls"] = i.Tls.Server
+		var tls map[string]interface{}
+		if err := json.Unmarshal(i.Tls.Server, &tls); err != nil {
+			return nil, err
+		}
+		i.ApplyRealityShortID(tls, true)
+		combined["tls"] = tls
 	}
 
 	if i.Options != nil {

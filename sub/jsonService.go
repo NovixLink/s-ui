@@ -225,6 +225,9 @@ func (j *JsonService) getOutbounds(clientConfig json.RawMessage, inbounds []*mod
 					}
 					newOut["tls"] = outTls
 				}
+				if outTLS, ok := newOut["tls"].(map[string]interface{}); ok {
+					inData.ApplyRealityShortID(outTLS, false)
+				}
 
 				remark, _ := addr["remark"].(string)
 				// Multiple addresses share one inbound tag, so the name only

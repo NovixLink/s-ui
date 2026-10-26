@@ -27,6 +27,7 @@ import (
 	"github.com/sagernet/sing/common/logger"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/service"
 )
 
 func RegisterInbound(registry *inbound.Registry) {
@@ -37,15 +38,17 @@ var _ adapter.TCPInjectableInbound = (*Inbound)(nil)
 
 type Inbound struct {
 	inbound.Adapter
-	ctx        context.Context
-	router     adapter.ConnectionRouterEx
-	logger     logger.ContextLogger
-	listener   *listener.Listener
-	service    *vless.Service[string]
-	sessions   *usersession.Registry
-	tlsConfig  tls.ServerConfig
-	transport  adapter.V2RayServerTransport
-	references []string
+	ctx           context.Context
+	router        adapter.ConnectionRouterEx
+	logger        logger.ContextLogger
+	listener      *listener.Listener
+	service       *vless.Service[string]
+	sessions      *usersession.Registry
+	tlsConfig     tls.ServerConfig
+	transport     adapter.V2RayServerTransport
+	references    []string
+	shared        *SharedListeners
+	sharedOptions option.VLESSInboundOptions
 }
 
 func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.VLESSInboundOptions) (adapter.Inbound, error) {
@@ -69,7 +72,11 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		return it.Flow
 	}))
 	inbound.service = service
-	if options.TLS != nil {
+	if sharedEnabled(options) {
+		inbound.shared = sharedPoolFromContext(ctx)
+		inbound.sharedOptions = options
+	}
+	if options.TLS != nil && inbound.shared == nil {
 		inbound.tlsConfig, err = tls.NewServerWithOptions(tls.ServerOptions{
 			Context: ctx,
 			Logger:  logger,
@@ -83,9 +90,9 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 		if err != nil {
 			return nil, err
 		}
-		if options.TLS.Reality != nil && options.TLS.Reality.Enabled && options.TLS.Reality.Handshake.Detour != "" {
-			inbound.references = []string{options.TLS.Reality.Handshake.Detour}
-		}
+	}
+	if options.TLS != nil && options.TLS.Reality != nil && options.TLS.Reality.Enabled && options.TLS.Reality.Handshake.Detour != "" {
+		inbound.references = []string{options.TLS.Reality.Handshake.Detour}
 	}
 	if options.Transport != nil {
 		inbound.transport, err = v2ray.NewServerTransport(ctx, logger, common.PtrValueOrDefault(options.Transport), inbound.tlsConfig, (*inboundTransportHandler)(inbound))
@@ -106,6 +113,13 @@ func NewInbound(ctx context.Context, router adapter.Router, logger log.ContextLo
 
 func (h *Inbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if stage != adapter.StartStateStart {
+		return nil
+	}
+	if h.shared != nil {
+		if err := h.shared.add(h); err != nil {
+			return err
+		}
+		scope.Add(func() error { return h.shared.remove(h) })
 		return nil
 	}
 	if h.tlsConfig != nil {
@@ -162,11 +176,19 @@ func (h *Inbound) NewConnection(ctx context.Context, conn net.Conn, metadata ada
 		}
 		conn = tlsConn
 	}
+	h.acceptVLESS(ctx, conn, metadata, onClose)
+}
+
+func (h *Inbound) acceptVLESS(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {
 	err := h.service.NewConnection(adapter.WithContext(ctx, &metadata), conn, metadata.Source, onClose)
 	if err != nil {
 		N.CloseOnHandshakeFailure(conn, onClose, err)
 		h.logger.ErrorContext(ctx, E.Cause(err, "process connection from ", metadata.Source))
 	}
+}
+
+func sharedPoolFromContext(ctx context.Context) *SharedListeners {
+	return service.FromContext[*SharedListeners](ctx)
 }
 
 func (h *Inbound) newConnectionEx(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, onClose N.CloseHandlerFunc) {

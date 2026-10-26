@@ -37,6 +37,7 @@ func LinkGenerator(clientConfig json.RawMessage, i *model.Inbound, hostname stri
 	var tls map[string]interface{}
 	if i.TlsId > 0 {
 		tls = prepareTls(i.Tls)
+		i.ApplyRealityShortID(tls, false)
 	}
 
 	var userConfig map[string]map[string]interface{}
@@ -79,6 +80,9 @@ func LinkGenerator(clientConfig json.RawMessage, i *model.Inbound, hostname stri
 	}
 
 	for index := range Addrs {
+		if addrTLS, ok := Addrs[index]["tls"].(map[string]interface{}); ok {
+			i.ApplyRealityShortID(addrTLS, false)
+		}
 		if server, ok := Addrs[index]["server"].(string); ok {
 			Addrs[index]["server"] = NormalizeHost(server)
 		}

@@ -77,7 +77,7 @@ The **frontend** lives in a submodule. If you only work on the backend, you can 
    rm -rf web/html/*
    cp -R frontend/dist/* web/html/
    . ./build-tags.sh
-   go build -ldflags "$(ldflags_for dev)" -tags "$(tags_for dev)" -o sui main.go
+   sh scripts/relay-go.sh build -ldflags "$(ldflags_for dev)" -tags "$(tags_for dev)" -o sui main.go
    ```
 
 3. Run:
@@ -94,7 +94,7 @@ with them. Ask for a profile by name rather than copying a list:
 ```bash
 . ./build-tags.sh
 TAGS=$(tags_for dev)
-go build -tags "$TAGS" -ldflags "$(ldflags_for dev)" ...
+sh scripts/relay-go.sh build -tags "$TAGS" -ldflags "$(ldflags_for dev)" ...
 ```
 
 Profiles: `test`, `dev`, `release`, `windows`, `docker`. Assign before use, so an unknown
@@ -185,8 +185,8 @@ tests then skip rather than cover anything:
 ```bash
 . ./build-tags.sh
 TAGS=$(tags_for test)
-go test -tags "$TAGS" ./...
-go test -race -short -tags "$TAGS" ./api/... ./service/... ./sub/... ./database/... ./util/... ./logger/... ./network/...
+sh scripts/relay-go.sh test -tags "$TAGS" ./...
+sh scripts/relay-go.sh test -race -short -tags "$TAGS" ./api/... ./service/... ./sub/... ./database/... ./util/... ./logger/... ./network/...
 ```
 
 Use `test`, not `dev`: `dev` adds the cronet tags, which need a toolchain only the release
@@ -216,7 +216,7 @@ and logout in both modes when touching anything in `api/session.go`, `web/` or `
 ### Running the Linter (optional)
 
 ```bash
-go vet ./...
+sh scripts/relay-go.sh vet ./...
 # Optional: staticcheck, golangci-lint, etc.
 ```
 

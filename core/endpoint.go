@@ -1,11 +1,33 @@
 package core
 
 import (
+	suiVless "github.com/alireza0/s-ui/core/protocol/vless"
 	"github.com/alireza0/s-ui/logger"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing/service"
 )
+
+// CheckInbounds validates the final shared-listener batch before a write removes
+// any live inbound. The router and non-REALITY protocols are left unchanged.
+func (c *Core) CheckInbounds(configs [][]byte, remove []string) error {
+	box, err := c.running()
+	if err != nil {
+		return err
+	}
+	var add []suiVless.SharedInbound
+	for _, config := range configs {
+		var in option.Inbound
+		if err = in.UnmarshalJSONContext(box.scope.Context(), config); err != nil {
+			return err
+		}
+		if options, ok := in.Options.(*option.VLESSInboundOptions); ok {
+			add = append(add, suiVless.SharedInbound{Tag: in.Tag, Options: *options})
+		}
+	}
+	return service.FromContext[*suiVless.SharedListeners](box.scope.Context()).Validate(add, remove)
+}
 
 // Each method below takes the live box once via running() and then works from
 // that single reference. The managers come off the box rather than from

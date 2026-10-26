@@ -1,6 +1,8 @@
 # S-UI
 **An Advanced Web Panel • Built on SagerNet/Sing-Box**
 
+This fork adds [shared VLESS/REALITY listeners with stable per-inbound short IDs](SHARED-REALITY.md), while retaining upstream routing, users, and other protocols.
+
 ![](https://img.shields.io/github/v/release/alireza0/s-ui.svg)
 ![S-UI Docker pull](https://img.shields.io/docker/pulls/alireza7/s-ui.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alireza0/s-ui)](https://goreportcard.com/report/github.com/alireza0/s-ui)

@@ -42,7 +42,7 @@ RUN if [ "$TARGETARCH" = "arm" ]; then export GOARM=7; [ "$TARGETVARIANT" = "v6"
     . ./build-tags.sh && \
     TAGS=$(tags_for docker) && \
     LDFLAGS=$(ldflags_for docker) && \
-    go build -ldflags="$LDFLAGS" -tags "$TAGS" -o sui main.go
+    sh scripts/relay-go.sh build -ldflags="$LDFLAGS" -tags "$TAGS" -o sui main.go
 
 FROM alpine:3
 LABEL org.opencontainers.image.authors="alireza7@gmail.com"

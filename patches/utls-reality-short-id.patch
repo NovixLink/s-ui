@@ -1,0 +1,23 @@
+diff --git a/conn.go b/conn.go
+index 5149cef..6c16f55 100644
+--- a/conn.go
++++ b/conn.go
+@@ -126,0 +127,4 @@ type Conn struct {
++
++	// realityShortID is published only after a successful REALITY handshake.
++	realityShortID       [8]byte
++	realityAuthenticated bool
+diff --git a/reality.go b/reality.go
+index a684b86..a9adfd9 100644
+--- a/reality.go
++++ b/reality.go
+@@ -582,0 +583,2 @@ func RealityServer(ctx context.Context, conn net.Conn, config *RealityConfig) (*
++		hs.c.realityShortID = hs.ClientShortId
++		hs.c.realityAuthenticated = true
+@@ -597,0 +600,6 @@ func RealityServer(ctx context.Context, conn net.Conn, config *RealityConfig) (*
++// RealityShortID returns the selector authenticated by a successful REALITY
++// server handshake. It is unavailable on ordinary TLS and client connections.
++func (c *Conn) RealityShortID() ([8]byte, bool) {
++	return c.realityShortID, c.realityAuthenticated
++}
++

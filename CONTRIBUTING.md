@@ -33,7 +33,7 @@ Please be respectful and constructive when interacting with maintainers and othe
 ### Clone and Submodules
 
 ```bash
-git clone https://github.com/alireza0/s-ui
+git clone --branch codex/shared-vless-443 https://github.com/NovixLink/s-ui
 cd s-ui
 git submodule update --init --recursive
 ```
@@ -116,7 +116,7 @@ documents the per-platform deltas (Windows and Docker swap `with_musl` for `with
 ### Docker (optional)
 
 ```bash
-git clone https://github.com/alireza0/s-ui
+git clone --branch codex/shared-vless-443 https://github.com/NovixLink/s-ui
 cd s-ui
 git submodule update --init --recursive
 docker build -t s-ui .
@@ -185,8 +185,8 @@ tests then skip rather than cover anything:
 ```bash
 . ./build-tags.sh
 TAGS=$(tags_for test)
-sh scripts/relay-go.sh test -tags "$TAGS" ./...
-sh scripts/relay-go.sh test -race -short -tags "$TAGS" ./api/... ./service/... ./sub/... ./database/... ./util/... ./logger/... ./network/...
+sh scripts/relay-go.sh test -ldflags="$(ldflags_for test)" -tags "$TAGS" ./...
+sh scripts/relay-go.sh test -race -short -ldflags="$(ldflags_for test)" -tags "$TAGS" ./api/... ./service/... ./sub/... ./database/... ./util/... ./logger/... ./network/... ./core/protocol/vless/...
 ```
 
 Use `test`, not `dev`: `dev` adds the cronet tags, which need a toolchain only the release

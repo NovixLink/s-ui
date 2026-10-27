@@ -18,6 +18,9 @@ To install S-UI on Windows:
 2. Follow the installation wizard
 3. Use `s-ui-windows.bat` for management
 
+To build from source, install Git for Windows and put Git Bash (`sh`) on PATH.
+Both entrypoints use `scripts/relay-go.sh` and the `windows` build profile.
+
 To build from source:
 - With CMD: `build-windows.bat`
 - With PowerShell: `.\build-windows.ps1`

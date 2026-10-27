@@ -83,7 +83,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -102,7 +102,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh)
     if [[ $? == 0 ]]; then
         LOGI "Update is complete, Panel has automatically restarted "
         exit 0
@@ -118,7 +118,7 @@ custom_version() {
     exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/alireza0/s-ui/main/install.sh"
+    download_link="https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh"
 
     install_command="bash <(curl -Ls $download_link) $panel_version"
 
@@ -323,7 +323,7 @@ show_log() {
 update_shell() {
     # Certificate verification stays on: this file is about to be installed as
     # /usr/bin/s-ui and run as root.
-    wget -O /usr/bin/s-ui -N https://github.com/alireza0/s-ui/raw/main/s-ui.sh
+    wget -O /usr/bin/s-ui -N https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/s-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "Failed to download script, Please check whether the machine can connect Github"

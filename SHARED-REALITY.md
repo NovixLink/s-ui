@@ -5,6 +5,27 @@ listener between raw TCP VLESS/REALITY inbounds using the same listen address an
 port. Each logical inbound retains its tag, VLESS users, UUIDs, multiplexing,
 sessions, routing rules, and traffic attribution.
 
+## Source baseline and maintained changes
+
+- Upstream: `https://github.com/alireza0/s-ui`, tag `v1.6.6`, commit
+  `d50238fe4cb17bac34b17141421f2111b70014cd`.
+- Fork: `https://github.com/NovixLink/s-ui`, branch `codex/shared-vless-443`;
+  current application version: `1.6.6-shared.2`.
+- Pinned build dependencies: Go `1.27.3`, sing-box `v1.14.4`,
+  `github.com/metacubex/utls v1.8.7`, and
+  `github.com/sagernet/sing v0.9.7-0.20261023115459-5dc452e537bf`.
+  `go.mod` and `go.sum` remain the dependency authority.
+
+The fork changes the VLESS listener pool and REALITY selector dispatch in
+`core/`, derives selectors in `database/model/inbounds.go`, and keeps subscription
+and generated-link projections aligned in `service/`, `sub/`, and `util/`.
+Hot edits validate the final shared group and construct enabled REALITY TLS
+configurations before removing live members, so invalid keys or edits that leave
+incompatible listeners on the same address and port are rejected without changing
+the running group. Ordinary TLS certificate-provider lifecycles remain upstream.
+The accessor patch, build wrapper, build entrypoints, tests, and fork-only updater
+URLs complete the change. There is no new database schema or persisted state.
+
 ## Stable selectors
 
 Each persisted VLESS/REALITY inbound automatically receives a 16-character
@@ -69,6 +90,36 @@ The existing Linux, Docker, and release workflow entrypoints use this wrapper.
 When updating the pinned uTLS version, regenerate and test the accessor patch
 against that version before building.
 
+The VLESS package asserts the accessor interface at compile time. A direct build
+against the unpatched pinned module fails instead of producing a binary that
+silently rejects shared-listener connections. The test suite covers stable
+selectors and projections, real REALITY/VLESS authentication and routing, rejected
+TLS batch edits, concurrent handshakes during membership changes, and first/last
+member removal. The race gate includes `core/protocol/vless`; the full Box lifecycle
+tests run in the non-race suite because the pinned upstream NetworkManager has a
+separate startup race.
+
+## Replaying the fork onto a new upstream version
+
+Keep the current fork branch available until the replacement has passed its
+checks. Export every fork commit from the exact baseline above, then apply that
+series to a separate branch based on the chosen new upstream commit:
+
+```sh
+git format-patch --binary --full-index --output-directory ../shared-reality-patches \
+  d50238fe4cb17bac34b17141421f2111b70014cd..codex/shared-vless-443
+git switch -c shared-reality-next <new-upstream-commit>
+git am --3way ../shared-reality-patches/*.patch
+```
+
+Review conflicts manually against the new upstream implementation; do not choose
+one side wholesale. Recheck listener/TLS lifecycle, selector extraction, VLESS
+authentication, link generation, and all build/updater entrypoints. Update the
+uTLS accessor patch only against the newly pinned dependency, then run the full
+tagged suite, vet, the established race gate, and real connection/restart checks.
+Record the new baseline and dependency pins here. Preserve the existing inbound
+IDs and selector derivation; an upstream upgrade does not rotate short IDs.
+
 ## Deployment and rollback
 
 1. Preserve the original binary and a consistent full SQLite backup, including all IDs.
@@ -84,8 +135,12 @@ against that version before building.
    same user, unauthorized-line rejection, TCP/UDP, traffic accounting, hot edits,
    and another service restart against the persisted database.
 
-Future upgrades must use a tested build of this fork. The upstream updater
-downloads the upstream binary and would replace the shared-listener implementation.
+Future upgrades must use a tested build of this fork. `install.sh` fetches releases
+and checksums only from `NovixLink/s-ui`; `s-ui.sh` fetches installer and management
+scripts from its `codex/shared-vless-443` branch. No upstream download fallback is
+provided. Until a tested fork release exists, installation/update stops at the
+missing fork release or asset; use the tested source-built package. Keep that
+maintenance branch available, and update these URLs together if it is renamed.
 
 To roll back, restore the original binary and the matching pre-change database
 together. Upstream cannot start several independent listeners on the same socket,

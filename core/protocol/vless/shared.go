@@ -10,12 +10,20 @@ import (
 	"sort"
 	"sync"
 
+	utls "github.com/metacubex/utls"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/listener"
 	"github.com/sagernet/sing-box/common/tls"
 	"github.com/sagernet/sing-box/option"
 	N "github.com/sagernet/sing/common/network"
 )
+
+type realityShortIDReader interface {
+	RealityShortID() ([8]byte, bool)
+}
+
+// Building this fork requires the accessor patch, not just the upstream module.
+var _ realityShortIDReader = (*utls.Conn)(nil)
 
 // SharedListeners belongs to one Box. Logical inbounds retain their own VLESS
 // authentication, mux, sessions and tag; only the TCP/REALITY entry is shared.
@@ -51,7 +59,7 @@ func sharedEnabled(o option.VLESSInboundOptions) bool {
 func sharedProfile(o option.VLESSInboundOptions) (string, string, error) {
 	// Match listener.ListenTCP's default address. Address, port and namespace
 	// are already owned by the group key, not duplicated in its TLS profile.
-	key := fmt.Sprint(o.Listen.Build(netip.AddrFrom4([4]byte{127, 0, 0, 1})), ":", o.ListenPort, ":", o.NetNs)
+	key := sharedAddress(o)
 	listen := o.ListenOptions
 	listen.Listen = nil
 	listen.ListenPort = 0
@@ -65,6 +73,10 @@ func sharedProfile(o option.VLESSInboundOptions) (string, string, error) {
 		TLS    option.InboundTLSOptions
 	}{listen, server})
 	return key, string(profile), err
+}
+
+func sharedAddress(o option.VLESSInboundOptions) string {
+	return fmt.Sprint(o.Listen.Build(netip.AddrFrom4([4]byte{127, 0, 0, 1})), ":", o.ListenPort, ":", o.NetNs)
 }
 
 func shortIDs(o option.VLESSInboundOptions) ([][8]byte, error) {
@@ -104,19 +116,22 @@ func (p *SharedListeners) Validate(add []SharedInbound, remove []string) error {
 		}
 	}
 	for _, in := range add {
-		if !sharedEnabled(in.Options) {
+		if in.Options.ListenPort == 0 {
 			continue
 		}
-		key, _, err := sharedProfile(in.Options)
-		if err != nil {
-			return err
-		}
+		key := sharedAddress(in.Options)
 		planned[key] = append(planned[key], in)
 	}
 	for _, entries := range planned {
 		profile := ""
 		seen := make(map[[8]byte]string)
 		for _, in := range entries {
+			if !sharedEnabled(in.Options) {
+				if len(entries) > 1 {
+					return fmt.Errorf("only raw TCP VLESS with REALITY can share a listen address and port; use a separate port for inbound %q", in.Tag)
+				}
+				continue
+			}
 			_, current, err := sharedProfile(in.Options)
 			if err != nil {
 				return err
@@ -254,7 +269,7 @@ func (g *sharedListener) NewConnection(ctx context.Context, conn net.Conn, metad
 
 func authenticatedShortID(conn net.Conn) ([8]byte, bool) {
 	for {
-		if reader, ok := conn.(interface{ RealityShortID() ([8]byte, bool) }); ok {
+		if reader, ok := conn.(realityShortIDReader); ok {
 			return reader.RealityShortID()
 		}
 		wrapper, ok := conn.(interface{ Upstream() any })

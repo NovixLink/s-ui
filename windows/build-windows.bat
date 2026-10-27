@@ -3,7 +3,13 @@ setlocal enabledelayedexpansion
 
 echo Building S-UI for Windows...
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
+
+where sh >nul 2>&1
+if errorlevel 1 (
+    echo Error: Git Bash ^(sh^) is required to apply the fork's uTLS patch.
+    exit /b 1
+)
 
 REM Check if Go is installed
 go version >nul 2>&1
@@ -53,11 +59,11 @@ set GOOS=windows
 set GOARCH=amd64
 
 REM Try to build with CGO first
-go build -ldflags "-w -s" -tags "with_quic,with_grpc,with_utls,with_acme,with_gvisor,with_tailscale" -o sui.exe main.go
+sh -c ". ./build-tags.sh; sh scripts/relay-go.sh build -ldflags \"$(ldflags_for windows)\" -tags \"$(tags_for windows)\" -o sui.exe main.go"
 if errorlevel 1 (
     echo Warning: CGO build failed, trying without CGO...
     set CGO_ENABLED=0
-    go build -ldflags "-w -s" -tags "with_quic,with_grpc,with_utls,with_acme,with_gvisor,with_tailscale" -o sui.exe main.go
+    sh -c ". ./build-tags.sh; sh scripts/relay-go.sh build -ldflags \"$(ldflags_for windows)\" -tags \"$(tags_for windows)\" -o sui.exe main.go"
     if errorlevel 1 (
         echo Error: Failed to build backend
         pause

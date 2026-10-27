@@ -15,6 +15,12 @@ if ($Help) {
     exit 0
 }
 
+Set-Location (Split-Path $PSScriptRoot -Parent)
+if (!(Get-Command sh -ErrorAction SilentlyContinue)) {
+    Write-Error "Git Bash (sh) is required to apply the fork's uTLS patch."
+    exit 1
+}
+
 Write-Host "Building S-UI for Windows ($Architecture)..." -ForegroundColor Green
 
 # Check if Go is installed
@@ -96,15 +102,16 @@ if ($NoCGO) {
 }
 
 # Build command
-$buildCmd = "go build -ldflags `"-w -s`" -tags `"with_quic,with_grpc,with_utls,with_acme,with_gvisor,with_tailscale`" -o sui.exe main.go"
+$buildArgs = '. ./build-tags.sh; sh scripts/relay-go.sh build -ldflags "$(ldflags_for windows)" -tags "$(tags_for windows)" -o sui.exe main.go'
 
 try {
-    Invoke-Expression $buildCmd
+    # Stdin preserves shell quotes on both Windows PowerShell and PowerShell 7.
+    $buildArgs | & sh -s
     if ($LASTEXITCODE -ne 0) {
         if (!$NoCGO) {
             Write-Host "CGO build failed, trying without CGO..." -ForegroundColor Yellow
             $env:CGO_ENABLED = "0"
-            Invoke-Expression $buildCmd
+            $buildArgs | & sh -s
             if ($LASTEXITCODE -ne 0) {
                 throw "Failed to build backend even without CGO"
             }

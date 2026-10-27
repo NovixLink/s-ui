@@ -3,7 +3,7 @@
 #
 #   . ./build-tags.sh
 #   TAGS=$(tags_for docker)   # assign, so a bad profile aborts under set -e
-#   go build -tags "$TAGS" -ldflags "$(ldflags_for docker)" ...
+#   sh scripts/relay-go.sh build -tags "$TAGS" -ldflags "$(ldflags_for docker)" ...
 #
 # Without tags sing-box swaps in the stubs from core/register_*_stub.go.
 #

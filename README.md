@@ -68,9 +68,13 @@ Full documentation lives in the [Wiki](https://github.com/alireza0/s-ui/wiki):
 
 ## Install & Upgrade to Latest Version
 
+The fork installer downloads releases from `NovixLink/s-ui`. Until a tested fork
+release is published, build from source using [SHARED-REALITY.md](SHARED-REALITY.md).
+Fork maintenance and upstream rebasing are documented there.
+
 ### Linux/macOS
 ```sh
-bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh)
 ```
 
 #### Installer language
@@ -78,7 +82,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/master/install.s
 The installer is available in the same six languages as the panel: `en` (default), `fa`, `ru`, `vi`, `zhcn`, `zhtw`. Choose one with the `SUI_LANG` environment variable (when unset, your system `$LANG` is used as a hint):
 
 ```sh
-SUI_LANG=fa bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh)
+SUI_LANG=fa bash <(curl -Ls https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh)
 ```
 
 ### Alpine Linux
@@ -86,38 +90,39 @@ Alpine uses `apk` and OpenRC instead of `apt`/systemd. The install script detect
 
 ```sh
 apk add bash
-bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh)
 ```
 
 Manage the service with OpenRC: `rc-service s-ui start|stop|restart` and `rc-update add s-ui default`.
 
 ### Windows
-1. Download the latest Windows release from [GitHub Releases](https://github.com/alireza0/s-ui/releases/latest)
+1. Download the latest Windows release from [GitHub Releases](https://github.com/NovixLink/s-ui/releases/latest)
 2. Extract the ZIP file
 3. Run `install-windows.bat` as Administrator
 4. Follow the installation wizard
 
-## Install legacy Version
+## Install a specific fork release
 
-**Step 1:** To install your desired legacy version, add the version to the end of the installation command. e.g., ver `v1.5.0`:
+Use the tag of a tested release published in `NovixLink/s-ui`:
 
 ```sh
-VERSION=v1.5.0 && bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/$VERSION/install.sh) $VERSION
+VERSION=<published-fork-tag>
+bash <(curl -Ls https://raw.githubusercontent.com/NovixLink/s-ui/codex/shared-vless-443/install.sh) "$VERSION"
 ```
 
 ## Manual installation
 
 ### Linux/macOS
-1. Get the latest version of S-UI based on your OS/Architecture from GitHub: [https://github.com/alireza0/s-ui/releases/latest](https://github.com/alireza0/s-ui/releases/latest)
-2. **OPTIONAL** Get the latest version of `s-ui.sh` [https://raw.githubusercontent.com/alireza0/s-ui/master/s-ui.sh](https://raw.githubusercontent.com/alireza0/s-ui/master/s-ui.sh)
-3. **OPTIONAL** Copy `s-ui.sh` to /usr/bin/ and run `chmod +x /usr/bin/s-ui`.
+1. Get the latest version of S-UI based on your OS/Architecture from GitHub: [https://github.com/NovixLink/s-ui/releases/latest](https://github.com/NovixLink/s-ui/releases/latest)
+2. Use `s-ui.sh` from the same tested fork package.
+3. Copy `s-ui.sh` to `/usr/bin/s-ui` and run `chmod +x /usr/bin/s-ui`.
 4. Extract s-ui tar.gz file to a directory of your choice and navigate to the directory where you extracted the tar.gz file.
 5. Copy *.service files to /etc/systemd/system/ and run `systemctl daemon-reload`.
 6. Enable autostart and start S-UI service using `systemctl enable s-ui --now`
 7. Start sing-box service using `systemctl enable sing-box --now`
 
 ### Windows
-1. Get the latest Windows version from GitHub: [https://github.com/alireza0/s-ui/releases/latest](https://github.com/alireza0/s-ui/releases/latest)
+1. Get the latest Windows version from GitHub: [https://github.com/NovixLink/s-ui/releases/latest](https://github.com/NovixLink/s-ui/releases/latest)
 2. Download the appropriate Windows package (e.g., `s-ui-windows-amd64.zip`)
 3. Extract the ZIP file to a directory of your choice
 4. Run `install-windows.bat` as Administrator
@@ -164,32 +169,18 @@ curl -fsSL https://get.docker.com | sh
 
 **Step 2:** Install S-UI
 
-> Docker compose method
+Build the fork image from its maintained branch:
 
 ```shell
-mkdir s-ui && cd s-ui
-wget -q https://raw.githubusercontent.com/alireza0/s-ui/master/docker-compose.yml
-docker compose up -d
-```
-
-> Use docker
-
-```shell
-mkdir s-ui && cd s-ui
+git clone --branch codex/shared-vless-443 --recurse-submodules https://github.com/NovixLink/s-ui
+cd s-ui
+docker build -t s-ui-shared:local .
 docker run -itd \
     -p 2095:2095 -p 2096:2096 -p 443:443 -p 80:80 \
-    -v $PWD/db/:/app/db/ \
-    -v $PWD/cert/:/root/cert/ \
+    -v "$PWD/db/:/app/db/" \
+    -v "$PWD/cert/:/root/cert/" \
     --name s-ui --restart=unless-stopped \
-    alireza7/s-ui:latest
-```
-
-> Build your own image
-
-```shell
-git clone https://github.com/alireza0/s-ui
-git submodule update --init --recursive
-docker build -t s-ui .
+    s-ui-shared:local
 ```
 
 </details>
@@ -207,7 +198,8 @@ docker build -t s-ui .
 ### Clone the repository
 ```shell
 # clone repository
-git clone https://github.com/alireza0/s-ui
+git clone --branch codex/shared-vless-443 https://github.com/NovixLink/s-ui
+cd s-ui
 # clone submodules
 git submodule update --init --recursive
 ```
@@ -227,7 +219,8 @@ rm -fr web/html/*
 # apply new frontend compiled files
 cp -R frontend/dist/ web/html/
 # build
-go build -o sui main.go
+. ./build-tags.sh
+sh scripts/relay-go.sh build -ldflags="$(ldflags_for test)" -tags "$(tags_for test)" -o sui main.go
 ```
 
 To run backend (from root folder of repository):

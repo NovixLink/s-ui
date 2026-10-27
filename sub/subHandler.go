@@ -23,15 +23,15 @@ func NewSubHandler(g *gin.RouterGroup) {
 }
 
 func (s *SubHandler) initRouter(g *gin.RouterGroup) {
-	g.GET("/:subid", s.subs)
-	g.HEAD("/:subid", s.subHeaders)
+	g.GET("/*subid", s.subs)
+	g.HEAD("/*subid", s.subHeaders)
 }
 
 func (s *SubHandler) subs(c *gin.Context) {
 	var headers []string
 	var result *string
 	var err error
-	subId := c.Param("subid")
+	subId := strings.TrimPrefix(c.Param("subid"), "/")
 	format, isFormat := c.GetQuery("format")
 	if isFormat {
 		switch format {
@@ -60,7 +60,7 @@ func (s *SubHandler) subs(c *gin.Context) {
 }
 
 func (s *SubHandler) subHeaders(c *gin.Context) {
-	subId := c.Param("subid")
+	subId := strings.TrimPrefix(c.Param("subid"), "/")
 	client, err := s.SubService.getClientBySubId(subId)
 	if err != nil {
 		logger.Error(err)

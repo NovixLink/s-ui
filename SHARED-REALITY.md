@@ -10,7 +10,7 @@ sessions, routing rules, and traffic attribution.
 - Upstream: `https://github.com/alireza0/s-ui`, tag `v1.6.6`, commit
   `d50238fe4cb17bac34b17141421f2111b70014cd`.
 - Fork: `https://github.com/NovixLink/s-ui`, branch `codex/shared-vless-443`;
-  current application version: `1.6.6-shared.2`.
+  current application version: `1.6.6-shared.3`.
 - Pinned build dependencies: Go `1.27.3`, sing-box `v1.14.4`,
   `github.com/metacubex/utls v1.8.7`, and
   `github.com/sagernet/sing v0.9.7-0.20261023115459-5dc452e537bf`.
@@ -25,6 +25,13 @@ incompatible listeners on the same address and port are rejected without changin
 the running group. Ordinary TLS certificate-provider lifecycles remain upstream.
 The accessor patch, build wrapper, build entrypoints, tests, and fork-only updater
 URLs complete the change. There is no new database schema or persisted state.
+
+Subscription GET/HEAD routes capture the complete client name beneath the
+configured subscription prefix. Names containing `/` work in already issued raw
+URLs and URLs escaped once, for URI, JSON, Clash, and HEAD requests. Only the
+wildcard route's leading separator is removed; Go/Gin's existing single URL
+decoding and exact enabled-client lookup remain in place. Client names, stored
+links, and frontend assets do not need to change.
 
 ## Stable selectors
 
